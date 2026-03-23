@@ -593,11 +593,11 @@ def build_application() -> Application:
     app.add_handler(CallbackQueryHandler(cb_src_info,    pattern=r"^src_info:"))
     app.add_handler(CallbackQueryHandler(cb_noop,        pattern="^noop$"))
 
-    # Every 2 hours
+    # Every 2 hours, first run after 1 hour
     app.job_queue.run_repeating(
         scheduled_job,
         interval=7200,
-        first=10,
+        first=3600,
         name="news_every_2h",
     )
 
