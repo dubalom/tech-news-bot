@@ -34,11 +34,11 @@ logger = logging.getLogger(__name__)
 def validate_config() -> bool:
     missing = []
     if not TELEGRAM_TOKEN:
-        missing.append("TELEGRAM_BOT_TOKEN")
+        missing.append("BOT_TOKEN")
     if not TELEGRAM_CHAT_ID:
-        missing.append("TELEGRAM_CHAT_ID")
+        missing.append("CHAT_ID")
     if not ANTHROPIC_API_KEY:
-        missing.append("ANTHROPIC_API_KEY")
+        missing.append("CLAUDE_KEY")
     if missing:
         logger.error(f"Не заданы переменные окружения: {', '.join(missing)}")
         logger.error("Заполни файл .env (скопируй из .env.example)")
