@@ -15,6 +15,13 @@ Tech News Parser Bot (@news223news_bot)
 import asyncio
 import logging
 import sys
+import os
+
+# Debug: show which env vars Railway is passing (masked)
+_keys = ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "ANTHROPIC_API_KEY"]
+for _k in _keys:
+    _v = os.environ.get(_k, "")
+    print(f"DEBUG {_k}: {'SET('+str(len(_v))+' chars)' if _v else 'NOT SET'}", flush=True)
 
 from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, ANTHROPIC_API_KEY
 from telegram_bot import build_application, run_news_pipeline
