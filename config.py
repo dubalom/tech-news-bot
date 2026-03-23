@@ -8,7 +8,7 @@ if Path(".env").exists():
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+ANTHROPIC_API_KEY = os.getenv("CLAUDE_API_KEY", "") or os.getenv("ANTHROPIC_API_KEY", "")
 
 SCHEDULE_HOUR = int(os.getenv("SCHEDULE_HOUR", "8"))
 SCHEDULE_MINUTE = int(os.getenv("SCHEDULE_MINUTE", "0"))
