@@ -237,10 +237,11 @@ async def run_news_pipeline(
         name = site["name"]
         try:
             articles  = await loop.run_in_executor(None, fetch_site_articles, site)
+            logger.info(f"[{name}] Got {len(articles)} articles")
             if not articles:
                 await bot.send_message(
                     chat_id=chat_id,
-                    text=f"⚠️ *{name}* — нет данных",
+                    text=f"⚠️ *{name}* — не удалось получить статьи",
                     parse_mode=ParseMode.MARKDOWN,
                 )
                 continue
@@ -248,7 +249,13 @@ async def run_news_pipeline(
             summaries = await loop.run_in_executor(
                 None, summarize_articles, name, articles
             )
+            logger.info(f"[{name}] Got {len(summaries)} summaries")
             if not summaries:
+                await bot.send_message(
+                    chat_id=chat_id,
+                    text=f"⚠️ *{name}* — не удалось обработать",
+                    parse_mode=ParseMode.MARKDOWN,
+                )
                 continue
 
             emoji  = SITE_EMOJIS.get(name, "📌")

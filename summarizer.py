@@ -31,18 +31,22 @@ def summarize_articles(site_name: str, articles: list[dict]) -> list[dict]:
 Отвечай ТОЛЬКО тезисами, без вступлений и заголовков."""
 
     try:
+        logger.info(f"[{site_name}] Calling Claude, key length={len(ANTHROPIC_API_KEY)}")
         message = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
         raw = message.content[0].text.strip()
-        # Return as single block with site's first article URL
+        logger.info(f"[{site_name}] Claude returned {len(raw)} chars")
         url = articles[0].get("url", "") if articles else ""
         return [{"headline": "", "summary": raw, "url": url}]
     except Exception as e:
         logger.error(f"Claude error for {site_name}: {e}")
-        return []
+        # Fallback: return raw article titles if Claude fails
+        fallback = "\n".join(f"• {a['title']}" for a in articles[:8])
+        url = articles[0].get("url", "") if articles else ""
+        return [{"headline": "", "summary": f"_(Claude недоступен)_\n{fallback}", "url": url}]
 
 
 def translate_text(text: str) -> str:
