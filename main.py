@@ -15,10 +15,12 @@ Tech News Parser Bot (@news223news_bot)
 import asyncio
 import logging
 import sys
+import time
 
 from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, ANTHROPIC_API_KEY
 from telegram_bot import build_application, run_news_pipeline
 from telegram import Bot
+from telegram.error import Conflict
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -62,11 +64,25 @@ def main() -> None:
         asyncio.run(run_once())
         return
 
-    logger.info("Запускаю @news223news_bot...")
-    app = build_application()
-    logger.info(f"Бот работает. Отправка в: {TELEGRAM_CHAT_ID}")
-    logger.info("Нажми Ctrl+C для остановки")
-    app.run_polling(drop_pending_updates=True)
+    # Ждём пока старый инстанс остановится (актуально для Railway rolling deploy)
+    logger.info("Запускаю @news223news_bot... Ожидание 15 сек перед стартом.")
+    time.sleep(15)
+
+    retries = 0
+    while True:
+        try:
+            app = build_application()
+            logger.info(f"Бот работает. Отправка в: {TELEGRAM_CHAT_ID}")
+            app.run_polling(drop_pending_updates=True)
+            break
+        except Conflict:
+            retries += 1
+            wait = 20 * retries
+            logger.warning(f"Конфликт: другой инстанс ещё работает. Ожидание {wait}с (попытка {retries})...")
+            time.sleep(wait)
+        except Exception as e:
+            logger.error(f"Ошибка запуска: {e}")
+            time.sleep(10)
 
 
 if __name__ == "__main__":
