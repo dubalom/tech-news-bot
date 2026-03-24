@@ -229,8 +229,7 @@ async def run_news_pipeline(
 
     await bot.send_message(
         chat_id=chat_id,
-        text=f"📡 *Технодайджест — {now}*\n⏳ Собираю с {len(sites)} источников...",
-        parse_mode=ParseMode.MARKDOWN,
+        text=f"📡 Технодайджест — {now}\n⏳ Собираю с {len(sites)} источников...",
     )
 
     for site in sites:
@@ -242,8 +241,7 @@ async def run_news_pipeline(
                 await bot.send_message(
                     chat_id=chat_id,
                     text=f"⚠️ *{name}* — не удалось получить статьи",
-                    parse_mode=ParseMode.MARKDOWN,
-                )
+                    )
                 continue
 
             summaries = await loop.run_in_executor(
@@ -253,22 +251,28 @@ async def run_news_pipeline(
             if not summaries:
                 await bot.send_message(
                     chat_id=chat_id,
-                    text=f"⚠️ *{name}* — не удалось обработать",
-                    parse_mode=ParseMode.MARKDOWN,
+                    text=f"⚠️ {name} — не удалось обработать",
                 )
                 continue
 
-            emoji  = SITE_EMOJIS.get(name, "📌")
+            emoji = SITE_EMOJIS.get(name, "📌")
             summary_text = summaries[0]["summary"] if summaries else ""
-            block = f"{emoji} *{name}*\n{'─'*28}\n{summary_text}"
+            block = f"{emoji} {name}\n{'─'*30}\n{summary_text}"
 
             for chunk in split_text(block):
-                await bot.send_message(
-                    chat_id=chat_id,
-                    text=chunk,
-                    parse_mode=ParseMode.MARKDOWN,
-                    disable_web_page_preview=True,
-                )
+                try:
+                    await bot.send_message(
+                        chat_id=chat_id,
+                        text=chunk,
+                        disable_web_page_preview=True,
+                    )
+                except Exception as send_err:
+                    logger.error(f"[{name}] Send error: {send_err}")
+                    # Try sending as plain escaped text
+                    await bot.send_message(
+                        chat_id=chat_id,
+                        text=f"{emoji} {name}\n\n[Ошибка форматирования]",
+                    )
                 await asyncio.sleep(0.3)
 
             await asyncio.sleep(1)
@@ -277,14 +281,12 @@ async def run_news_pipeline(
             logger.error(f"Error: {name}: {e}")
             await bot.send_message(
                 chat_id=chat_id,
-                text=f"⚠️ *{name}* — ошибка: {e}",
-                parse_mode=ParseMode.MARKDOWN,
+                text=f"⚠️ {name} — ошибка: {e}",
             )
 
     await bot.send_message(
         chat_id=chat_id,
-        text="✅ *Дайджест готов!*",
-        parse_mode=ParseMode.MARKDOWN,
+        text="✅ Дайджест готов!",
         reply_markup=kb_after_news(),
     )
 
