@@ -252,33 +252,17 @@ async def run_news_pipeline(
                 continue
 
             emoji  = SITE_EMOJIS.get(name, "📌")
-            header = f"{emoji} *{name}*\n{'─'*28}"
-            await bot.send_message(
-                chat_id=chat_id,
-                text=header,
-                parse_mode=ParseMode.MARKDOWN,
-            )
+            summary_text = summaries[0]["summary"] if summaries else ""
+            block = f"{emoji} *{name}*\n{'─'*28}\n{summary_text}"
 
-            for art in summaries:
-                url = art.get("url", site["url"])
-                from urllib.parse import urlparse
-                try:
-                    domain = urlparse(url).netloc.replace("www.", "")
-                except Exception:
-                    domain = url
-                block = (
-                    f"🔖 *{art['headline']}*\n"
-                    f"{art['summary']}"
-                    + (f"\n🔗 [{domain}]({url})" if url else "")
+            for chunk in split_text(block):
+                await bot.send_message(
+                    chat_id=chat_id,
+                    text=chunk,
+                    parse_mode=ParseMode.MARKDOWN,
+                    disable_web_page_preview=True,
                 )
-                for chunk in split_text(block):
-                    await bot.send_message(
-                        chat_id=chat_id,
-                        text=chunk,
-                        parse_mode=ParseMode.MARKDOWN,
-                        disable_web_page_preview=True,
-                    )
-                    await asyncio.sleep(0.3)
+                await asyncio.sleep(0.3)
 
             await asyncio.sleep(1)
 

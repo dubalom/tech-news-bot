@@ -8,83 +8,41 @@ client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 def summarize_articles(site_name: str, articles: list[dict]) -> list[dict]:
     """
-    For each article: generate a Russian headline + 3-sentence summary.
+    Summarize latest news from a site into bullet points in Russian.
     Returns list of {headline, summary, url}.
     """
     if not articles:
         return []
 
-    # Build numbered article list for Claude
-    items = []
-    for i, a in enumerate(articles[:8], 1):
-        line = f"{i}. {a['title']}"
-        if a.get("summary"):
-            line += f"\n   Описание: {a['summary'][:300]}"
-        if a.get("url"):
-            line += f"\n   URL: {a['url']}"
-        items.append(line)
+    titles = "\n".join(
+        f"- {a['title']}" + (f" | {a['summary'][:200]}" if a.get("summary") else "")
+        for a in articles[:10]
+    )
 
-    prompt = f"""Ты редактор русскоязычного технологического дайджеста.
+    prompt = f"""Ты редактор технологического дайджеста.
 
-Ниже — список статей с сайта «{site_name}».
-Для КАЖДОЙ статьи напиши строго в таком формате:
+Последние новости с сайта «{site_name}»:
+{titles}
 
----
-ЗАГОЛОВОК: <краткий заголовок на русском, 5-10 слов>
-ТЕКСТ: <3 предложения краткого содержания на русском, информативно и по сути>
----
-
-Статьи:
-{chr(10).join(items)}
-
-Правила:
-- Переводи заголовки на русский, не копируй английские
-- Пиши живо, без воды
-- Строго соблюдай формат ЗАГОЛОВОК / ТЕКСТ для каждой статьи
-- Не добавляй ничего лишнего"""
+Напиши дайджест на русском языке: 8-10 коротких тезисов.
+Каждый тезис начинается с символа "•" на новой строке.
+Каждый тезис — одно информативное предложение.
+Переводи заголовки на русский, не копируй английские.
+Отвечай ТОЛЬКО тезисами, без вступлений и заголовков."""
 
     try:
         message = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=2048,
+            max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
         raw = message.content[0].text.strip()
-        return _parse_response(raw, articles)
+        # Return as single block with site's first article URL
+        url = articles[0].get("url", "") if articles else ""
+        return [{"headline": "", "summary": raw, "url": url}]
     except Exception as e:
         logger.error(f"Claude error for {site_name}: {e}")
         return []
-
-
-def _parse_response(raw: str, articles: list[dict]) -> list[dict]:
-    """Parse Claude's structured response into list of dicts."""
-    results = []
-    blocks = raw.split("---")
-    article_idx = 0
-
-    for block in blocks:
-        block = block.strip()
-        if not block:
-            continue
-
-        headline = ""
-        summary = ""
-
-        for line in block.splitlines():
-            line = line.strip()
-            if line.startswith("ЗАГОЛОВОК:"):
-                headline = line.replace("ЗАГОЛОВОК:", "").strip()
-            elif line.startswith("ТЕКСТ:"):
-                summary = line.replace("ТЕКСТ:", "").strip()
-            elif summary and line and not line.startswith("ЗАГОЛОВОК"):
-                summary += " " + line  # multiline text
-
-        if headline and summary:
-            url = articles[article_idx]["url"] if article_idx < len(articles) else ""
-            results.append({"headline": headline, "summary": summary, "url": url})
-            article_idx += 1
-
-    return results
 
 
 def translate_text(text: str) -> str:
