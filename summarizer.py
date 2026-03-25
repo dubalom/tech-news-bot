@@ -33,7 +33,7 @@ def summarize_articles(site_name: str, articles: list[dict]) -> list[dict]:
     try:
         logger.info(f"[{site_name}] Calling Claude, key length={len(ANTHROPIC_API_KEY)}")
         message = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-3-5-haiku-20241022",
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -42,7 +42,7 @@ def summarize_articles(site_name: str, articles: list[dict]) -> list[dict]:
         url = articles[0].get("url", "") if articles else ""
         return [{"headline": "", "summary": raw, "url": url}]
     except Exception as e:
-        logger.error(f"Claude error for {site_name}: {e}")
+        logger.error(f"Claude error for {site_name}: {type(e).__name__}: {e}")
         # Fallback: return raw article titles if Claude fails
         fallback = "\n".join(f"• {a['title']}" for a in articles[:8])
         url = articles[0].get("url", "") if articles else ""
@@ -61,7 +61,7 @@ def translate_text(text: str) -> str:
 
     try:
         message = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-3-5-haiku-20241022",
             max_tokens=4096,
             messages=[{"role": "user", "content": prompt}],
         )
