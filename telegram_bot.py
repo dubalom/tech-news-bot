@@ -222,10 +222,11 @@ async def run_news_pipeline(
     sites = active_sites if not site_names else [
         s for s in active_sites if s["name"] in site_names
     ]
+    logger.info(f"Pipeline started: {len(sites)} active sites, chat_id={chat_id}")
 
     tz  = pytz.timezone(TIMEZONE)
     now = datetime.now(tz).strftime("%d.%m.%Y %H:%M")
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     await bot.send_message(
         chat_id=chat_id,
@@ -329,7 +330,15 @@ async def cb_news_all(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     q = update.callback_query
     await q.answer("Запускаю...")
     await q.edit_message_text("⏳ Загружаю все источники... (~3–5 мин)")
-    await run_news_pipeline(bot=context.bot, chat_id=q.message.chat_id)
+    try:
+        await run_news_pipeline(bot=context.bot, chat_id=q.message.chat_id)
+    except Exception as e:
+        logger.error(f"Pipeline error (all): {e}", exc_info=True)
+        await context.bot.send_message(
+            chat_id=q.message.chat_id,
+            text=f"❌ Ошибка при запуске дайджеста: {e}",
+            reply_markup=kb_after_news(),
+        )
 
 async def cb_category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     q = update.callback_query
@@ -343,12 +352,20 @@ async def cb_category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         "cat_other":    "🔬 Остальные",
     }
     label = labels.get(q.data, q.data)
-    await q.edit_message_text(f"⏳ Загружаю: *{label}*...", parse_mode=ParseMode.MARKDOWN)
-    await run_news_pipeline(
-        bot=context.bot,
-        chat_id=q.message.chat_id,
-        site_names=CATEGORIES.get(q.data, []),
-    )
+    await q.edit_message_text(f"⏳ Загружаю: {label}...")
+    try:
+        await run_news_pipeline(
+            bot=context.bot,
+            chat_id=q.message.chat_id,
+            site_names=CATEGORIES.get(q.data, []),
+        )
+    except Exception as e:
+        logger.error(f"Pipeline error ({q.data}): {e}", exc_info=True)
+        await context.bot.send_message(
+            chat_id=q.message.chat_id,
+            text=f"❌ Ошибка: {e}",
+            reply_markup=kb_after_news(),
+        )
 
 async def cb_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     q = update.callback_query
